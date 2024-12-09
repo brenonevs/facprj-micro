@@ -10,7 +10,7 @@ from services.melody_recorder import MelodyRecorder
 class ArduinoCommunication:
     def __init__(self):
         self.commands = {
-           "record_melody": "record_melody",
+           "1": "1",
            "play_melody": "play_melody",
            "stop_melody": "stop_melody",
            "clear_melody": "clear_melody"
@@ -31,7 +31,7 @@ class ArduinoCommunication:
             return "Invalid command"
     
     def process_command(self, command):
-        if command == self.commands["record_melody"]:
+        if command == self.commands["1"]:
             self.record_melody()
         elif command == self.commands["play_melody"]:
             self.play_melody()
