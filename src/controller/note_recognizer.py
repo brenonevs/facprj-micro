@@ -25,13 +25,19 @@ class NoteRecognizer:
     Attributes:
         p (pyaudio.PyAudio): Instância do PyAudio.
         stream (pyaudio.Stream): Stream de entrada para captura de áudio.
+        input_device_info (dict): Informações sobre o dispositivo de entrada de áudio.
     """
 
     def __init__(self):
         """Inicializa o reconhecedor de notas e configura o stream de áudio."""
         self.p = pyaudio.PyAudio()
-        self.stream = self.p.open(format=pyaudio.paInt16, channels=1, rate=RATE, input=True, frames_per_buffer=CHUNK)
-        # Adiciona buffers para armazenar o histórico temporal
+        self.stream = self.p.open(format=pyaudio.paInt16, channels=1, rate=RATE, 
+                                  input=True, frames_per_buffer=CHUNK)
+        
+        # Obtém informações sobre o dispositivo de entrada atual
+        self.input_device_info = self.p.get_default_input_device_info()
+        print(f"Microfone em uso: {self.input_device_info['name']}")
+        
         self.time_points = []
         self.freq_history = []
         self.start_time = time.time()
@@ -95,6 +101,21 @@ class NoteRecognizer:
                     min_diff, closest_note = diff, note
         return closest_note
 
+    def get_note_from_frequency(self):
+        """Obtém a nota musical a partir da frequência dominante e plota o espectrograma.
+
+        Returns:
+            tuple: Uma tupla contendo a frequência e a nota identificada.
+        """
+        data = np.frombuffer(self.stream.read(CHUNK, exception_on_overflow=False), dtype=np.int16)
+        frequency = self.capture_frequency()
+        note = self.closest_note(frequency)
+        
+        # Passa a frequência detectada para o plot
+        self.plot_spectrogram(data, frequency)
+        
+        return frequency, note
+
     def plot_spectrogram(self, data, detected_freq):
         """Plota o espectro de frequências do sinal de áudio ao longo do tempo.
         
@@ -135,21 +156,6 @@ class NoteRecognizer:
         plt.draw()
         plt.pause(0.1)
         plt.clf()
-
-    def get_note_from_frequency(self):
-        """Obtém a nota musical a partir da frequência dominante e plota o espectrograma.
-
-        Returns:
-            tuple: Uma tupla contendo a frequência e a nota identificada.
-        """
-        data = np.frombuffer(self.stream.read(CHUNK, exception_on_overflow=False), dtype=np.int16)
-        frequency = self.capture_frequency()
-        note = self.closest_note(frequency)
-        
-        # Passa a frequência detectada para o plot
-        self.plot_spectrogram(data, frequency)
-        
-        return frequency, note
 
     def close(self):
         """Fecha o stream de áudio e libera os recursos."""
