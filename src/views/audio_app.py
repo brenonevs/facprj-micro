@@ -160,4 +160,3 @@ class AudioApp(ctk.CTk):
         self.play_button.configure(state="disabled")
         self.save_button.configure(state="disabled")
         messagebox.showinfo("Melodia Limpa", "A melodia foi limpa.")
-
