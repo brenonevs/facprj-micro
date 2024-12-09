@@ -1,6 +1,7 @@
 import sounddevice as sd
 import numpy as np
 import time
+import json
 from .note_recognizer import NoteRecognizer
 
 FIXED_DURATION = 0.5  
@@ -39,18 +40,43 @@ class MelodyRecorder:
         self.melody.append((frequency, note))
         return frequency, note
 
-    def save_melody_to_file(self, filename="melody.txt"):
-        """Salva a sequência de notas em um arquivo .txt."""
+    def save_melody_to_file(self, filename="melodies.json"):
+        """Salva a sequência de notas em um arquivo .json com identificadores de melodia."""
+        try:
+            with open(filename, 'r', encoding='utf-8') as file:
+                melodies = json.load(file)
+        except FileNotFoundError:
+            melodies = {}
+
+        # Determina o próximo identificador de melodia
+        melody_id = f"melodia {len(melodies) + 1}"
+
+        # Adiciona a nova melodia ao dicionário de melodias
+        melodies[melody_id] = self.melody
+
         with open(filename, 'w', encoding='utf-8') as file:
-            for frequency, note, duration in self.melody:
-                file.write(f"Frequência: {frequency:.2f} Hz - Nota: {note} - Duração: {duration:.2f}s\n")
+            json.dump(melodies, file, ensure_ascii=False, indent=4)
+        
         return filename
 
     def clear_melody(self):
+        """Limpa a melodia atual e remove do arquivo JSON."""
         self.melody.clear()
 
-        with open("melody.txt", "w", encoding='utf-8') as file:
-            file.write(f"")
+        try:
+            with open("melodies.json", 'r', encoding='utf-8') as file:
+                melodies = json.load(file)
+        except FileNotFoundError:
+            melodies = {}
+
+        # Determina o identificador da última melodia
+        if melodies:
+            last_melody_id = f"melodia {len(melodies)}"
+            if last_melody_id in melodies:
+                del melodies[last_melody_id]
+
+        with open("melodies.json", 'w', encoding='utf-8') as file:
+            json.dump(melodies, file, ensure_ascii=False, indent=4)
 
 class MelodyPlayer:
     def __init__(self):
@@ -75,8 +101,20 @@ class MelodyPlayer:
         sd.play(note, self.sample_rate)
         sd.wait()  # Espera a nota terminar de tocar
 
-    def play_melody(self, melody):
-        """Reproduz uma sequência de notas."""
+    def play_melody(self, melody_id, filename="melodies.json"):
+        """Reproduz uma sequência de notas identificada por melody_id."""
+        try:
+            with open(filename, 'r', encoding='utf-8') as file:
+                melodies = json.load(file)
+        except FileNotFoundError:
+            print("Arquivo de melodias não encontrado.")
+            return
+
+        melody = melodies.get(melody_id)
+        if not melody:
+            print(f"Melodia {melody_id} não encontrada.")
+            return
+
         for frequency, note, duration in melody:
             self.play_note(frequency, duration)
             time.sleep(0.1)  # Pequena pausa entre notas

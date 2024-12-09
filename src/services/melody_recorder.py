@@ -7,6 +7,9 @@ sys.path.append(base_dir)
 
 from views.audio_app import AudioApp
 
-if __name__ == "__main__":
-    app = AudioApp()
-    app.mainloop()
+class MelodyRecorder:
+    def __init__(self):
+        self.app = AudioApp()
+    
+    def record_melody(self):
+        self.app.mainloop()

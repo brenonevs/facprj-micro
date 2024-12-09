@@ -3,6 +3,7 @@ from tkinter import messagebox
 from controller.audio_recorder import MelodyRecorder, MelodyPlayer
 from controller.note_recognizer import NoteRecognizer
 import threading
+import json
 
 
 class AudioApp(ctk.CTk):
@@ -146,7 +147,15 @@ class AudioApp(ctk.CTk):
 
     def play_melody(self):
         """Reproduz a sequência de notas gravadas."""
-        self.player.play_melody(self.recorder.melody)
+        try:
+            with open("melodies.json", 'r', encoding='utf-8') as file:
+                melodies = json.load(file)
+            last_melody_id = f"melodia {len(melodies)}"
+            self.player.play_melody(last_melody_id)
+        except FileNotFoundError:
+            messagebox.showerror("Erro", "Arquivo de melodias não encontrado.")
+        except KeyError:
+            messagebox.showerror("Erro", "Nenhuma melodia encontrada para reprodução.")
 
     def save_melody(self):
         """Salva a sequência de notas em um arquivo e exibe uma mensagem de confirmação."""
