@@ -10,6 +10,7 @@ sys.path.append(base_dir)
 
 from services.melody_recorder import MelodyRecorder
 from services.melody_preview import MelodyPreview
+from views.game_view import GameInterface
 
 class ArduinoCommunication:
     def __init__(self):
@@ -17,17 +18,17 @@ class ArduinoCommunication:
            "record": "record_melody",
            "preview": "preview_melody",
            "select_difficulty": "select_difficulty",
+           "start_game": "start_game",
            "stop_melody": "stop_melody",
            "clear_melody": "clear_melody"
         }
 
-
         #TODO: Essa parte vai virar uma nova classe GameConfig
-        self.selected_melody = None
-        self.selected_difficulty = None
+        self.selected_melody = 1
+        self.difficulty = 1
 
         self.melodies_file = os.path.join(os.path.dirname(base_dir), "melodies.json")
-        print(f"Caminho do arquivo de melodias: {self.melodies_file}")  # Debug)
+        print(f"Caminho do arquivo de melodias: {self.melodies_file}")  
 
     def send_command(self):
         while True:
@@ -46,6 +47,9 @@ class ArduinoCommunication:
 
         elif command == "select_difficulty":
             self.select_difficulty()
+        
+        elif command == "start_game":
+            self.start_game()
 
         elif command == "clear_melody":
             self.clear_melody()
@@ -102,6 +106,8 @@ class ArduinoCommunication:
     
     def start_game(self):
         print("Starting game")
+        game_interface = GameInterface(self.selected_melody, self.difficulty, self.melodies_file)
+        game_interface.start_game()
 
 if __name__ == "__main__":
     arduino = ArduinoCommunication()

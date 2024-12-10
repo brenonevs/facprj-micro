@@ -5,7 +5,9 @@ from scipy import signal
 import time
 
 RATE = 44100          # Taxa de amostragem
-CHUNK = 1024          # Tamanho do buffer
+CHUNK = 2048          # Aumentado para melhor resolução de frequência
+MIN_FREQ = 80         # Frequência mínima para voz humana
+MAX_FREQ = 1100      # Frequência máxima para voz humana
 
 NOTE_FREQUENCIES = {
     "dó": [261.63, 523.25, 1046.5], "dó#": [277.18, 554.37, 1108.73],
@@ -56,6 +58,11 @@ class NoteRecognizer:
         
         for _ in range(num_samples):
             data = np.frombuffer(self.stream.read(CHUNK, exception_on_overflow=False), dtype=np.int16)
+            
+            # Aplicar janela Hanning para reduzir vazamento espectral
+            window = np.hanning(len(data))
+            data = data * window
+            
             fft = np.fft.fft(data)
             freqs = np.fft.fftfreq(len(fft)) * RATE
             
@@ -63,13 +70,27 @@ class NoteRecognizer:
             magnitude = np.abs(fft)[positive_freqs_mask]
             freqs = freqs[positive_freqs_mask]
             
-            peak_idx = np.argmax(magnitude)
-            peak_freq = abs(freqs[peak_idx])
+            # Filtrar frequências fora da faixa de voz humana
+            voice_mask = (freqs >= MIN_FREQ) & (freqs <= MAX_FREQ)
+            magnitude = magnitude[voice_mask]
+            freqs = freqs[voice_mask]
             
-            if peak_freq > 50:
-                frequencies.append(peak_freq)
+            # Encontrar os N picos mais altos
+            num_peaks = 5
+            peak_indices = signal.find_peaks(magnitude)[0]
+            peak_frequencies = freqs[peak_indices]
+            peak_magnitudes = magnitude[peak_indices]
+            
+            # Ordenar por magnitude e pegar o pico mais significativo
+            if len(peak_frequencies) > 0:
+                sorted_indices = np.argsort(peak_magnitudes)[::-1]
+                peak_freq = peak_frequencies[sorted_indices[0]]
+                
+                if MIN_FREQ <= peak_freq <= MAX_FREQ:  # Dupla verificação da faixa de frequência
+                    frequencies.append(peak_freq)
         
-        current_freq = np.mean(frequencies) if frequencies else 0.0
+        # Usar mediana em vez de média para maior estabilidade
+        current_freq = np.median(frequencies) if frequencies else 0.0
         
         # Adiciona o ponto temporal e a frequência aos históricos
         current_time = time.time() - self.start_time
@@ -112,7 +133,7 @@ class NoteRecognizer:
         note = self.closest_note(frequency)
         
         # Passa a frequência detectada para o plot
-        self.plot_spectrogram(data, frequency)
+        #self.plot_spectrogram(data, frequency)
         
         return frequency, note
 
