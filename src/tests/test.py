@@ -18,6 +18,11 @@ stream = p.open(format=pyaudio.paInt16,  # Formato de áudio do microfone
                 input=True,  # Define como entrada
                 frames_per_buffer=chunk)
 
+# Adicione estas constantes no início do arquivo
+NUM_HARMONICOS = 4  # Número de harmônicos a considerar
+MIN_FREQ = 60
+MAX_FREQ = 300  # Limite para frequência fundamental
+
 try:
     while True:
         try:
@@ -35,15 +40,32 @@ try:
         # Calcula a FFT
         fft_data = abs(np.fft.rfft(data_np))**2
         
-        # Encontra a frequência dominante
-        which = fft_data[1:].argmax() + 1
-        
-        if which != len(fft_data)-1:
-            y0, y1, y2 = np.log(fft_data[which-1:which+2:])
-            x1 = (y2 - y0) * .5 / (2 * y1 - y2 - y0)
-            freq = (which + x1) * RATE/chunk
-            if freq > 60 and freq < 2000:  # Filtra frequências fora da faixa vocal típica
-                print(f"Frequência detectada: {freq:.1f} Hz")
+        # Encontra os picos mais significativos
+        picos = []
+        threshold = np.max(fft_data) * 0.1  # 10% do valor máximo
+
+        for i in range(1, len(fft_data)-1):
+            if fft_data[i] > threshold and fft_data[i] > fft_data[i-1] and fft_data[i] > fft_data[i+1]:
+                freq = i * RATE/chunk
+                if MIN_FREQ <= freq <= 2000:  # Ainda mantemos um filtro amplo
+                    picos.append((freq, fft_data[i]))
+
+        # Ordena os picos por amplitude
+        picos.sort(key=lambda x: x[1], reverse=True)
+
+        if picos:
+            # Analisa os primeiros picos para encontrar harmônicos
+            freq_fundamental = picos[0][0]
+            for pico in picos[1:min(len(picos), NUM_HARMONICOS)]:
+                # Verifica se este pico pode ser a frequência fundamental
+                freq_atual = pico[0]
+                for n in range(2, NUM_HARMONICOS + 1):
+                    if abs(picos[0][0] / n - freq_atual) < 10:  # Tolerância de 10 Hz
+                        freq_fundamental = freq_atual
+                        break
+            
+            if MIN_FREQ <= freq_fundamental <= MAX_FREQ:
+                print(f"Frequência fundamental: {freq_fundamental:.1f} Hz")
 
 except KeyboardInterrupt:
     print("\n* Gravação finalizada")
