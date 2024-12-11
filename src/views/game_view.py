@@ -44,6 +44,10 @@ class GameInterface:
             self.frequency_tolerance = 60
             self.time_required = 1.2
 
+        # Adicione isso junto com os outros labels na inicialização da interface
+        self.note_label = ctk.CTkLabel(self.window, text="♪", font=("Arial", 24))
+        self.note_label.pack(pady=10)
+
     def load_melody(self):
         with open(self.melodies_file, 'r', encoding='utf-8') as f:
             melodies = json.load(f)
