@@ -3,6 +3,8 @@ import sys
 import os
 import json
 import numpy as np
+import threading
+from time import sleep
 
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -27,6 +29,9 @@ class ArduinoCommunication:
             "dificil": 3
         }
 
+        self.is_sending_frequency = False
+        self.frequency_thread = None
+
     def read_serial(self):
         while True:
             if self.serial_receiver.in_waiting:
@@ -35,7 +40,7 @@ class ArduinoCommunication:
                 self.process_command(command)
     
     def send_command(self, command):
-        try:
+        try:  
             command = f"{command}\n"
             self.serial_sender.write(command.encode('utf-8'))
             print(f"Comando enviado: {command.strip()}")
@@ -46,6 +51,24 @@ class ArduinoCommunication:
         # Mapeia a frequência (80-1100) para potência do motor (0-255)
         potencia = int(np.interp(frequency, [80, 1100], [0, 255]))
         self.send_command(f"setpoint {potencia}")
+
+    def start_frequency_monitoring(self):
+        self.is_sending_frequency = True
+        self.frequency_thread = threading.Thread(target=self._frequency_loop)
+        self.frequency_thread.daemon = True  # Thread será encerrada quando o programa principal terminar
+        self.frequency_thread.start()
+
+    def stop_frequency_monitoring(self):
+        self.is_sending_frequency = False
+        if self.frequency_thread:
+            self.frequency_thread.join()
+
+    def _frequency_loop(self):
+        while self.is_sending_frequency:
+            frequency = current_frequency.get()
+            if frequency > 0:  # Só envia se detectou alguma frequência
+                self.send_command_frequency(frequency)
+            sleep(0.1)  # Pequeno delay para não sobrecarregar a porta serial
 
     def process_command(self, command):
         try:
@@ -71,7 +94,9 @@ class ArduinoCommunication:
                 # Inicia o jogo
                 print(f"Iniciando jogo com dificuldade {difficulty_name} e melodia {melody_number + 1}")
                 game_interface = GameInterface(melody_number, difficulty, self.melodies_file)
+                self.start_frequency_monitoring()  # Inicia o monitoramento
                 game_interface.start_game()
+                self.stop_frequency_monitoring()  # Para o monitoramento quando o jogo terminar
             else:
                 print("Formato de comando inválido")
                 
