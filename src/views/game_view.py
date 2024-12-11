@@ -118,6 +118,31 @@ class GameInterface:
         )
         self.current_freq_label.pack()
 
+        # Adicionar frame para a barra de frequência
+        self.frequency_bar_frame = ctk.CTkFrame(
+            self.main_frame,
+            corner_radius=10,
+            fg_color=("#333333", "#333333")
+        )
+        self.frequency_bar_frame.pack(pady=15, fill="x", padx=40)
+
+        # Label para a barra
+        self.frequency_bar_label = ctk.CTkLabel(
+            self.frequency_bar_frame,
+            text="Frequência",
+            font=("Roboto", 14)
+        )
+        self.frequency_bar_label.pack(pady=(10,5))
+
+        # Canvas para desenhar a barra de frequência
+        self.frequency_canvas = ctk.CTkCanvas(
+            self.frequency_bar_frame,
+            height=60,
+            bg="#333333",
+            highlightthickness=0
+        )
+        self.frequency_canvas.pack(fill="x", padx=20, pady=(0,10))
+
         # Nota atual com destaque
         self.note_label = ctk.CTkLabel(
             self.main_frame,
@@ -179,11 +204,14 @@ class GameInterface:
             frequency, note = self.melody_recorder.recognizer.get_note_from_frequency()
             self.current_freq_label.configure(text=f"Sua frequência: {frequency:.2f} Hz")
 
-            controller.frequency_state.current_frequency = frequency
-            print(f"\nUpdating frequency state: {controller.frequency_state.current_frequency}")
-            
             current_note = self.melody_data[self.current_note_index]
             expected_freq = current_note[0]
+
+            # Atualizar a barra de frequência
+            self.update_frequency_bar(frequency, expected_freq)
+
+            controller.frequency_state.current_frequency = frequency
+            print(f"\nUpdating frequency state: {controller.frequency_state.current_frequency}")
             
             if abs(frequency - expected_freq) <= self.frequency_tolerance:
                 if not self.is_note_correct:
@@ -211,6 +239,83 @@ class GameInterface:
                 )
             
             self.window.after(100, self.update_frequency)
+
+    def update_frequency_bar(self, current_freq, target_freq):
+        # Limpar o canvas
+        self.frequency_canvas.delete("all")
+        
+        # Configurações da barra
+        canvas_width = self.frequency_canvas.winfo_width()
+        canvas_height = self.frequency_canvas.winfo_height()
+        bar_height = 20
+        
+        # Calcular range de frequência para visualização
+        freq_range = self.frequency_tolerance * 4
+        min_freq = target_freq - freq_range/2
+        max_freq = target_freq + freq_range/2
+        
+        # Converter frequências para posições no canvas
+        def freq_to_x(freq):
+            return ((freq - min_freq) / (max_freq - min_freq)) * canvas_width
+        
+        # Desenhar fundo da barra
+        self.frequency_canvas.create_rectangle(
+            0, canvas_height/2 - bar_height/2,
+            canvas_width, canvas_height/2 + bar_height/2,
+            fill="#444444", outline=""
+        )
+        
+        # Desenhar zona alvo
+        target_x = freq_to_x(target_freq)
+        tolerance_left = freq_to_x(target_freq - self.frequency_tolerance)
+        tolerance_right = freq_to_x(target_freq + self.frequency_tolerance)
+        
+        self.frequency_canvas.create_rectangle(
+            tolerance_left, canvas_height/2 - bar_height/2,
+            tolerance_right, canvas_height/2 + bar_height/2,
+            fill=self.colors["success"], outline=""
+        )
+        
+        # Desenhar linha da frequência atual
+        current_x = freq_to_x(current_freq)
+        if current_x >= 0 and current_x <= canvas_width:
+            marker_height = bar_height * 1.5
+            self.frequency_canvas.create_line(
+                current_x, canvas_height/2 - marker_height/2,
+                current_x, canvas_height/2 + marker_height/2,
+                fill="white", width=3
+            )
+        
+        # Desenhar marcador da frequência alvo
+        self.frequency_canvas.create_line(
+            target_x, canvas_height/2 - bar_height,
+            target_x, canvas_height/2 + bar_height,
+            fill="#ffffff", width=2
+        )
+        
+        # Adicionar labels de frequência
+        font_size = 10
+        self.frequency_canvas.create_text(
+            10, canvas_height - 5,
+            text=f"{min_freq:.0f}Hz",
+            fill="white",
+            anchor="sw",
+            font=("Roboto", font_size)
+        )
+        self.frequency_canvas.create_text(
+            canvas_width - 10, canvas_height - 5,
+            text=f"{max_freq:.0f}Hz",
+            fill="white",
+            anchor="se",
+            font=("Roboto", font_size)
+        )
+        self.frequency_canvas.create_text(
+            target_x, 5,
+            text=f"{target_freq:.0f}Hz",
+            fill="white",
+            anchor="n",
+            font=("Roboto", font_size)
+        )
 
     def process_recording(self):
         if self.is_note_correct:
