@@ -4,6 +4,7 @@ import customtkinter as ctk
 import controller.frequency_state
 from controller.note_recognizer import NoteRecognizer
 from controller.audio_recorder import MelodyRecorder
+from controller.frequency_state import set_current_frequency
 
 class GameInterface:
     def __init__(self, selected_melody, difficulty, melodies_file):
@@ -230,6 +231,8 @@ class GameInterface:
     def update_frequency(self):
         if self.is_recording:
             frequency, note = self.melody_recorder.recognizer.get_note_from_frequency()
+            # Atualizar o estado da frequência atual
+            set_current_frequency(frequency)
             self.current_freq_label.configure(text=f"Sua frequência: {frequency:.2f} Hz")
 
             current_note = self.melody_data[self.current_note_index]
