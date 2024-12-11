@@ -48,7 +48,7 @@ class ArduinoCommunication:
             print(f"Erro ao enviar comando: {str(e)}")
 
     def send_command_frequency(self, frequency):
-        # Mapeia a frequência (80-1100) para potência do motor (0-255)
+        frequency = max(80, min(1100, frequency))
         potencia = int(np.interp(frequency, [80, 1100], [0, 255]))
         self.send_command(f"setpoint {potencia}")
 

@@ -13,6 +13,15 @@ class GameInterface:
         self.current_note_index = 0
         self.melody_data = None
         
+        # Definir as cores antes de setup_window
+        self.colors = {
+            "success": "#28a745",
+            "warning": "#ffc107",
+            "error": "#dc3545",
+            "primary": "#007bff",
+            "background": "#1a1a1a"
+        }
+        
         # Inicializa o reconhecedor de notas e o gravador
         self.note_recognizer = NoteRecognizer()
         self.melody_recorder = MelodyRecorder(self.note_recognizer)
@@ -21,19 +30,19 @@ class GameInterface:
         self.setup_window()
         self.is_recording = False
         self.correct_note_time = 0
-        self.time_required = 1.0  # Tempo em segundos que precisa manter a nota correta
+        self.time_required = 1.0
         self.is_note_correct = False
 
         # Ajustar tolerância e tempo baseado na dificuldade
         if difficulty == 1:
-            self.frequency_tolerance = 130  # Hz
-            self.time_required = 0.8      # segundos
+            self.frequency_tolerance = 130
+            self.time_required = 0.8
         elif difficulty == 2:
-            self.frequency_tolerance = 80  # Hz
-            self.time_required = 1.0      # segundos
+            self.frequency_tolerance = 80
+            self.time_required = 1.0
         else: 
-            self.frequency_tolerance = 60  # Hz
-            self.time_required = 1.2      # segundos
+            self.frequency_tolerance = 60
+            self.time_required = 1.2
 
     def load_melody(self):
         with open(self.melodies_file, 'r', encoding='utf-8') as f:
@@ -44,73 +53,105 @@ class GameInterface:
     def setup_window(self):
         self.window = ctk.CTk()
         self.window.title("Jogo de Melodias")
-        self.window.geometry("800x600")
+        self.window.geometry("900x700")  # Aumentado para mais espaço
         
+        # Configurações visuais
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
-
-        self.main_frame = ctk.CTkFrame(self.window)
-        self.main_frame.pack(pady=20, padx=20, fill="both", expand=True)
-
-        # Título
-        self.title_label = ctk.CTkLabel(
-            self.main_frame, 
-            text="Jogo de Melodias",
-            font=("Roboto", 24, "bold")
+        
+        # Configurar frame principal com gradiente
+        self.main_frame = ctk.CTkFrame(
+            self.window,
+            fg_color=self.colors["background"],
+            corner_radius=15
         )
-        self.title_label.pack(pady=10)
+        self.main_frame.pack(pady=30, padx=30, fill="both", expand=True)
 
-        # Informações da melodia
+        # Título com destaque
+        title_frame = ctk.CTkFrame(
+            self.main_frame,
+            fg_color="transparent"
+        )
+        title_frame.pack(pady=20, fill="x")
+
+        self.title_label = ctk.CTkLabel(
+            title_frame, 
+            text="🎵 Jogo de Melodias 🎵",
+            font=("Roboto", 32, "bold"),
+            text_color=self.colors["primary"]
+        )
+        self.title_label.pack()
+
+        # Informações da melodia com estilo
         self.melody_info = ctk.CTkLabel(
             self.main_frame,
-            text=f"Melodia: {self.melody_name}\nDificuldade: {self.difficulty}",
-            font=("Roboto", 16)
+            text=f"🎼 Melodia: {self.melody_name}\n⭐ Dificuldade: {self.difficulty}",
+            font=("Roboto", 18),
+            corner_radius=8,
+            fg_color=("#2d2d2d", "#2d2d2d"),
+            padx=20,
+            pady=10
         )
-        self.melody_info.pack(pady=10)
+        self.melody_info.pack(pady=15)
 
-        # Frame para frequências
-        self.freq_frame = ctk.CTkFrame(self.main_frame)
-        self.freq_frame.pack(pady=10, fill="x", padx=20)
+        # Frame para frequências com visual melhorado
+        self.freq_frame = ctk.CTkFrame(
+            self.main_frame,
+            corner_radius=10,
+            fg_color=("#333333", "#333333")
+        )
+        self.freq_frame.pack(pady=15, fill="x", padx=40)
 
         self.expected_freq_label = ctk.CTkLabel(
             self.freq_frame,
             text="Frequência esperada: -",
-            font=("Roboto", 14)
+            font=("Roboto", 16),
+            pady=10
         )
-        self.expected_freq_label.pack(pady=5)
+        self.expected_freq_label.pack()
 
         self.current_freq_label = ctk.CTkLabel(
             self.freq_frame,
             text="Sua frequência: -",
-            font=("Roboto", 14)
+            font=("Roboto", 16),
+            pady=10
         )
-        self.current_freq_label.pack(pady=5)
+        self.current_freq_label.pack()
 
-        # Nota atual
+        # Nota atual com destaque
         self.note_label = ctk.CTkLabel(
             self.main_frame,
             text="Prepare-se!",
-            font=("Roboto", 32, "bold")
+            font=("Roboto", 48, "bold"),
+            corner_radius=12,
+            fg_color=("#2d2d2d", "#2d2d2d"),
+            pady=20
         )
-        self.note_label.pack(pady=20)
+        self.note_label.pack(pady=25)
 
-        # Botão de gravação
+        # Botão de gravação estilizado
         self.record_button = ctk.CTkButton(
             self.main_frame,
             text="Iniciar Gravação",
             command=self.start_recording,
-            font=("Roboto", 16),
-            height=40
+            font=("Roboto", 18, "bold"),
+            height=50,
+            corner_radius=25,
+            fg_color=self.colors["primary"],
+            hover_color="#0056b3"
         )
-        self.record_button.pack(pady=20)
+        self.record_button.pack(pady=25)
 
-        # Status
+        # Status com visual melhorado
         self.status_label = ctk.CTkLabel(
             self.main_frame,
             text="Clique em 'Iniciar Gravação' para começar",
-            font=("Roboto", 14)
+            font=("Roboto", 16),
+            corner_radius=8,
+            fg_color=("#2d2d2d", "#2d2d2d"),
+            pady=12
         )
-        self.status_label.pack(pady=10)
+        self.status_label.pack(pady=15)
 
         # Após criar todos os widgets, adicione:
         # Inicializa a primeira nota e frequência
@@ -156,12 +197,16 @@ class GameInterface:
                 
                 progress = (time.time() - self.correct_note_time) / self.time_required * 100
                 self.status_label.configure(
+                    fg_color=self.colors["success"],
+                    text_color="white",
                     text=f"Mantenha a nota! {progress:.0f}% (±{self.frequency_tolerance}Hz)"
                 )
             else:
                 self.is_note_correct = False
                 self.correct_note_time = 0
                 self.status_label.configure(
+                    fg_color=self.colors["warning"],
+                    text_color="black",
                     text=f"Tente chegar mais perto da frequência esperada (±{self.frequency_tolerance}Hz)"
                 )
             
@@ -170,7 +215,11 @@ class GameInterface:
     def process_recording(self):
         if self.is_note_correct:
             current_note = self.melody_data[self.current_note_index]
-            self.status_label.configure(text=f"Parabéns! Você acertou a nota: {current_note[1]}")
+            self.status_label.configure(
+                fg_color=self.colors["success"],
+                text_color="white",
+                text=f"Parabéns! Você acertou a nota: {current_note[1]}"
+            )
             
             self.current_note_index += 1
             if self.current_note_index >= len(self.melody_data):

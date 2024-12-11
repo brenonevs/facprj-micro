@@ -23,7 +23,6 @@ class ArduinoCommunication:
            "clear_melody": "clear_melody"
         }
 
-        #TODO: Essa parte vai virar uma nova classe GameConfig
         self.selected_melody = 1
         self.difficulty = 1
 
