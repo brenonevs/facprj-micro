@@ -407,4 +407,5 @@ class GameInterface:
         self.note_label.configure(text="Fim do jogo!")
 
     def start_game(self):
+        print("Iniciando Jogo...")
         self.window.mainloop()
