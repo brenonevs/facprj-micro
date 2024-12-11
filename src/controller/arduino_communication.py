@@ -18,7 +18,7 @@ from controller.frequency_state import current_frequency
 class ArduinoCommunication:
     def __init__(self):
         self.serial_receiver = serial.Serial('COM7', 9600, timeout=1)  
-        self.serial_sender = serial.Serial('COM8', 9600, timeout=1) 
+        #self.serial_sender = serial.Serial('COM8', 9600, timeout=1) 
         self.melodies_file = os.path.join(os.path.dirname(base_dir), "melodies.json")
         print(f"Caminho do arquivo de melodias: {self.melodies_file}")
         
@@ -65,7 +65,7 @@ class ArduinoCommunication:
 
     def _frequency_loop(self):
         while self.is_sending_frequency:
-            frequency = current_frequency.get()
+            frequency = current_frequency
             if frequency > 0:  # Só envia se detectou alguma frequência
                 self.send_command_frequency(frequency)
             sleep(0.1)  # Pequeno delay para não sobrecarregar a porta serial

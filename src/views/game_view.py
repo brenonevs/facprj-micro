@@ -102,21 +102,23 @@ class GameInterface:
         )
         self.freq_frame.pack(pady=15, fill="x", padx=40)
 
+        # Label para frequência esperada com nota
         self.expected_freq_label = ctk.CTkLabel(
             self.freq_frame,
-            text="Frequência esperada: -",
+            text="♪ Dó | Frequência esperada: 129.20 Hz",
             font=("Roboto", 16),
-            pady=10
+            anchor="center"
         )
-        self.expected_freq_label.pack()
+        self.expected_freq_label.pack(pady=(10, 5), fill="x")
 
+        # Label para frequência atual
         self.current_freq_label = ctk.CTkLabel(
             self.freq_frame,
             text="Sua frequência: -",
             font=("Roboto", 16),
-            pady=10
+            anchor="center"
         )
-        self.current_freq_label.pack()
+        self.current_freq_label.pack(pady=(5, 10), fill="x")
 
         # Adicionar frame para a barra de frequência
         self.frequency_bar_frame = ctk.CTkFrame(
@@ -199,22 +201,12 @@ class GameInterface:
         )
         self.status_label.pack(pady=5)
 
-        # Nota atual com destaque
-        self.note_label = ctk.CTkLabel(
-            self.main_frame,
-            text="Prepare-se!",
-            font=("Roboto", 48, "bold"),
-            corner_radius=12,
-            fg_color=("#2d2d2d", "#2d2d2d"),
-            pady=20
-        )
-        self.note_label.pack(pady=25)
-
         # Após criar todos os widgets, adicione:
         # Inicializa a primeira nota e frequência
         first_note = self.melody_data[0]
-        self.note_label.configure(text=f"Nota: {first_note[1]}")
-        self.expected_freq_label.configure(text=f"Frequência esperada: {first_note[0]:.2f} Hz")
+        self.expected_freq_label.configure(
+            text=f"♪ {first_note[1]} | Frequência esperada: {first_note[0]:.2f} Hz"
+        )
 
     def start_recording(self):
         if not self.is_recording:
@@ -391,7 +383,7 @@ class GameInterface:
             self.status_label.configure(
                 fg_color=self.colors["success"],
                 text_color="white",
-                text=f"Parabéns! Você acertou a nota: {current_note[1]}"
+                text=f"Parabéns! Você acertou a nota!"
             )
             
             self.current_note_index += 1
@@ -400,8 +392,10 @@ class GameInterface:
             else:
                 # Prepara para a próxima nota
                 next_note = self.melody_data[self.current_note_index]
-                self.note_label.configure(text=f"Próxima nota: {next_note[1]}")
-                self.expected_freq_label.configure(text=f"Frequência esperada: {next_note[0]:.2f} Hz")
+                self.note_label.configure(text=f"♪ {next_note[1]}")
+                self.expected_freq_label.configure(
+                    text=f"♪ {next_note[1]} | Frequência esperada: {next_note[0]:.2f} Hz"
+                )
                 self.current_freq_label.configure(text="Sua frequência: -")
                 
                 # Atualiza o texto do botão
