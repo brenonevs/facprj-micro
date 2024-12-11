@@ -18,6 +18,7 @@ from controller.frequency_state import get_current_frequency
 class ArduinoCommunication:
     def __init__(self):
         self.serial_receiver = serial.Serial('COM7', 9600, timeout=1)  
+        self.serial_sender = serial.Serial('COM9', 9600, timeout=1)
         self.melodies_file = os.path.join(os.path.dirname(base_dir), "melodies.json")
         print(f"Caminho do arquivo de melodias: {self.melodies_file}")
         
@@ -36,7 +37,15 @@ class ArduinoCommunication:
         # Criar thread separada para monitorar a frequência
         def print_frequency():
             while True:
-                print(f"Frequência atual: {get_current_frequency()}")
+                if self.is_monitoring:  # Só envia frequência quando o monitoramento estiver ativo
+                    print(f"Frequência atual: {get_current_frequency()}")
+                    frequency = get_current_frequency()
+                    mapped_frequency = int(self.map(frequency, 80, 1100, 70, 200))
+                    print(f"Frequência mapeada enviada: {mapped_frequency}")
+                    command = f"setpoint {mapped_frequency}\n"
+                    
+                    print(f"Frequência original: {frequency}, Frequência mapeada: {mapped_frequency}")
+                    self.serial_sender.write(command.encode('utf-8'))
                 sleep(0.1)  # Atualiza a cada 0.1 segundos
         
         # Inicia o thread de monitoramento
@@ -90,6 +99,9 @@ class ArduinoCommunication:
         
     def stop_frequency_monitoring(self):
         self.is_monitoring = False
+
+    def map(self, x, in_min, in_max, out_min, out_max):
+        return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
 if __name__ == "__main__":
     arduino = ArduinoCommunication()
