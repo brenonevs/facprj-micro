@@ -143,6 +143,62 @@ class GameInterface:
         )
         self.frequency_canvas.pack(fill="x", padx=20, pady=(0,10))
 
+        # Adicionar frame para barra de progresso após a barra de frequência
+        self.progress_frame = ctk.CTkFrame(
+            self.main_frame,
+            corner_radius=10,
+            fg_color=("#333333", "#333333")
+        )
+        self.progress_frame.pack(pady=(15,5), fill="x", padx=40)
+
+        # Label para a barra de progresso
+        self.progress_label = ctk.CTkLabel(
+            self.progress_frame,
+            text="Progresso da Nota",
+            font=("Roboto", 14)
+        )
+        self.progress_label.pack(pady=(10,5))
+
+        # Canvas para desenhar a barra de progresso
+        self.progress_canvas = ctk.CTkCanvas(
+            self.progress_frame,
+            height=30,
+            bg="#333333",
+            highlightthickness=0
+        )
+        self.progress_canvas.pack(fill="x", padx=20, pady=(0,10))
+
+        # Frame para botões e status
+        self.controls_frame = ctk.CTkFrame(
+            self.main_frame,
+            fg_color="transparent"
+        )
+        self.controls_frame.pack(pady=15, fill="x", padx=40)
+
+        # Botão de gravação estilizado (agora dentro do controls_frame)
+        self.record_button = ctk.CTkButton(
+            self.controls_frame,
+            text="Iniciar Gravação",
+            command=self.start_recording,
+            font=("Roboto", 18, "bold"),
+            height=50,
+            corner_radius=25,
+            fg_color=self.colors["primary"],
+            hover_color="#0056b3"
+        )
+        self.record_button.pack(pady=10)
+
+        # Status com visual melhorado (agora dentro do controls_frame)
+        self.status_label = ctk.CTkLabel(
+            self.controls_frame,
+            text="Clique em 'Iniciar Gravação' para começar",
+            font=("Roboto", 16),
+            corner_radius=8,
+            fg_color=("#2d2d2d", "#2d2d2d"),
+            pady=12
+        )
+        self.status_label.pack(pady=5)
+
         # Nota atual com destaque
         self.note_label = ctk.CTkLabel(
             self.main_frame,
@@ -153,30 +209,6 @@ class GameInterface:
             pady=20
         )
         self.note_label.pack(pady=25)
-
-        # Botão de gravação estilizado
-        self.record_button = ctk.CTkButton(
-            self.main_frame,
-            text="Iniciar Gravação",
-            command=self.start_recording,
-            font=("Roboto", 18, "bold"),
-            height=50,
-            corner_radius=25,
-            fg_color=self.colors["primary"],
-            hover_color="#0056b3"
-        )
-        self.record_button.pack(pady=25)
-
-        # Status com visual melhorado
-        self.status_label = ctk.CTkLabel(
-            self.main_frame,
-            text="Clique em 'Iniciar Gravação' para começar",
-            font=("Roboto", 16),
-            corner_radius=8,
-            fg_color=("#2d2d2d", "#2d2d2d"),
-            pady=12
-        )
-        self.status_label.pack(pady=15)
 
         # Após criar todos os widgets, adicione:
         # Inicializa a primeira nota e frequência
@@ -209,29 +241,29 @@ class GameInterface:
 
             # Atualizar a barra de frequência
             self.update_frequency_bar(frequency, expected_freq)
-
-            controller.frequency_state.current_frequency = frequency
-            print(f"\nUpdating frequency state: {controller.frequency_state.current_frequency}")
             
             if abs(frequency - expected_freq) <= self.frequency_tolerance:
                 if not self.is_note_correct:
                     self.is_note_correct = True
                     self.correct_note_time = time.time()
                 
-                if time.time() - self.correct_note_time >= self.time_required:
+                progress = (time.time() - self.correct_note_time) / self.time_required
+                self.update_progress_bar(progress)
+                
+                if progress >= 1.0:
                     self.process_recording()
                     self.is_note_correct = False
                     return
                 
-                progress = (time.time() - self.correct_note_time) / self.time_required * 100
                 self.status_label.configure(
                     fg_color=self.colors["success"],
                     text_color="white",
-                    text=f"Mantenha a nota! {progress:.0f}% (±{self.frequency_tolerance}Hz)"
+                    text=f"Mantenha a nota! {progress*100:.0f}% (±{self.frequency_tolerance}Hz)"
                 )
             else:
                 self.is_note_correct = False
                 self.correct_note_time = 0
+                self.update_progress_bar(0)  # Zerar a barra de progresso
                 self.status_label.configure(
                     fg_color=self.colors["warning"],
                     text_color="black",
@@ -251,12 +283,15 @@ class GameInterface:
         
         # Calcular range de frequência para visualização
         freq_range = self.frequency_tolerance * 4
-        min_freq = target_freq - freq_range/2
+        # Garantir que a frequência mínima nunca seja negativa
+        min_freq = max(1, target_freq - freq_range/2)  # Usar 1 como mínimo absoluto
         max_freq = target_freq + freq_range/2
         
         # Converter frequências para posições no canvas
         def freq_to_x(freq):
-            return ((freq - min_freq) / (max_freq - min_freq)) * canvas_width
+            # Garantir que a frequência de entrada também não seja negativa
+            safe_freq = max(1, freq)
+            return ((safe_freq - min_freq) / (max_freq - min_freq)) * canvas_width
         
         # Desenhar fundo da barra
         self.frequency_canvas.create_rectangle(
@@ -315,6 +350,39 @@ class GameInterface:
             fill="white",
             anchor="n",
             font=("Roboto", font_size)
+        )
+
+    def update_progress_bar(self, progress):
+        # Limpar o canvas
+        self.progress_canvas.delete("all")
+        
+        # Configurações da barra
+        canvas_width = self.progress_canvas.winfo_width()
+        canvas_height = self.progress_canvas.winfo_height()
+        
+        # Desenhar fundo da barra
+        self.progress_canvas.create_rectangle(
+            0, 0, canvas_width, canvas_height,
+            fill="#444444", outline=""
+        )
+        
+        # Desenhar progresso
+        progress = min(1.0, max(0, progress))  # Garantir que fique entre 0 e 1
+        progress_width = canvas_width * progress
+        
+        if progress_width > 0:
+            self.progress_canvas.create_rectangle(
+                0, 0, progress_width, canvas_height,
+                fill=self.colors["success"], outline=""
+            )
+        
+        # Adicionar texto de porcentagem
+        percentage = progress * 100
+        self.progress_canvas.create_text(
+            canvas_width/2, canvas_height/2,
+            text=f"{percentage:.0f}%",
+            fill="white",
+            font=("Roboto", 12, "bold")
         )
 
     def process_recording(self):
