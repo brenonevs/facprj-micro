@@ -2,6 +2,7 @@ import serial
 import sys
 import os
 import json
+import numpy as np
 
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -10,11 +11,12 @@ sys.path.append(base_dir)
 
 from views.game_view import GameInterface
 from services.melody_recorder import MelodyRecorder
+from controller.frequency_state import current_frequency
 
 class ArduinoCommunication:
     def __init__(self):
-        # Configuração da comunicação serial
-        self.serial = serial.Serial('COM7', 9600, timeout=1)  # Ajuste a porta COM conforme necessário
+        self.serial_receiver = serial.Serial('COM7', 9600, timeout=1)  
+        self.serial_sender = serial.Serial('COM8', 9600, timeout=1) 
         self.melodies_file = os.path.join(os.path.dirname(base_dir), "melodies.json")
         print(f"Caminho do arquivo de melodias: {self.melodies_file}")
         
@@ -27,10 +29,23 @@ class ArduinoCommunication:
 
     def read_serial(self):
         while True:
-            if self.serial.in_waiting:
-                command = self.serial.readline().decode('utf-8').strip()
+            if self.serial_receiver.in_waiting:
+                command = self.serial_receiver.readline().decode('utf-8').strip()
                 print(f"Comando recebido: {command}")
                 self.process_command(command)
+    
+    def send_command(self, command):
+        try:
+            command = f"{command}\n"
+            self.serial_sender.write(command.encode('utf-8'))
+            print(f"Comando enviado: {command.strip()}")
+        except Exception as e:
+            print(f"Erro ao enviar comando: {str(e)}")
+
+    def send_command_frequency(self, frequency):
+        # Mapeia a frequência (80-1100) para potência do motor (0-255)
+        potencia = int(np.interp(frequency, [80, 1100], [0, 255]))
+        self.send_command(f"setpoint {potencia}")
 
     def process_command(self, command):
         try:

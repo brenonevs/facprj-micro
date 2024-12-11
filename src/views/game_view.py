@@ -1,6 +1,7 @@
 import json
 import time
 import customtkinter as ctk
+import controller.frequency_state
 from controller.note_recognizer import NoteRecognizer
 from controller.audio_recorder import MelodyRecorder
 
@@ -136,6 +137,9 @@ class GameInterface:
         if self.is_recording:
             frequency, note = self.melody_recorder.recognizer.get_note_from_frequency()
             self.current_freq_label.configure(text=f"Sua frequência: {frequency:.2f} Hz")
+
+            controller.frequency_state.current_frequency = frequency
+            print(f"\nUpdating frequency state: {controller.frequency_state.current_frequency}")
             
             current_note = self.melody_data[self.current_note_index]
             expected_freq = current_note[0]
