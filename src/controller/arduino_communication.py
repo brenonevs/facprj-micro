@@ -8,107 +8,66 @@ sys.stdout.reconfigure(encoding='utf-8')
 base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(base_dir)
 
-from services.melody_recorder import MelodyRecorder
-from services.melody_preview import MelodyPreview
 from views.game_view import GameInterface
+from services.melody_recorder import MelodyRecorder
 
 class ArduinoCommunication:
     def __init__(self):
-        self.commands = {
-           "record": "record_melody",
-           "preview": "preview_melody",
-           "select_difficulty": "select_difficulty",
-           "start_game": "start_game",
-           "stop_melody": "stop_melody",
-           "clear_melody": "clear_melody"
+        # Configuração da comunicação serial
+        self.serial = serial.Serial('COM7', 9600, timeout=1)  # Ajuste a porta COM conforme necessário
+        self.melodies_file = os.path.join(os.path.dirname(base_dir), "melodies.json")
+        print(f"Caminho do arquivo de melodias: {self.melodies_file}")
+        
+        # Mapeamento de dificuldades
+        self.difficulty_map = {
+            "facil": 1,
+            "medio": 2,
+            "dificil": 3
         }
 
-        #TODO: Essa parte vai virar uma nova classe GameConfig
-        self.selected_melody = 1
-        self.difficulty = 1
-
-        self.melodies_file = os.path.join(os.path.dirname(base_dir), "melodies.json")
-        print(f"Caminho do arquivo de melodias: {self.melodies_file}")  
-
-    def send_command(self):
+    def read_serial(self):
         while True:
-            message = input("Enter a command: ")
-            if message in self.commands.keys():
-                self.process_command(message)
-            else:
-                print("Invalid command")
+            if self.serial.in_waiting:
+                command = self.serial.readline().decode('utf-8').strip()
+                print(f"Comando recebido: {command}")
+                self.process_command(command)
 
     def process_command(self, command):
-        if command == "record": 
-            self.record_melody()
+        try:
+            # Verifica primeiro se é o comando CriarMelodia
+            if command.strip().lower() == "criarmelodia":
+                print("Iniciando gravação de melodia")
+                self.record_melody()
+                return
 
-        elif command == "preview":
-            self.preview_melody()
-
-        elif command == "select_difficulty":
-            self.select_difficulty()
-        
-        elif command == "start_game":
-            self.start_game()
-
-        elif command == "clear_melody":
-            self.clear_melody()
+            # Formato esperado: "Iniciar dificuldade numero_melodia"
+            parts = command.split()
+            if len(parts) == 3 and parts[0].lower() == "iniciar":
+                difficulty_name = parts[1].lower()
+                melody_number = int(parts[2]) - 1  # Converte para índice base-0
+                
+                # Valida e configura a dificuldade
+                if difficulty_name not in self.difficulty_map:
+                    print(f"Dificuldade inválida: {difficulty_name}")
+                    return
+                
+                difficulty = self.difficulty_map[difficulty_name]
+                
+                # Inicia o jogo
+                print(f"Iniciando jogo com dificuldade {difficulty_name} e melodia {melody_number + 1}")
+                game_interface = GameInterface(melody_number, difficulty, self.melodies_file)
+                game_interface.start_game()
+            else:
+                print("Formato de comando inválido")
+                
+        except Exception as e:
+            print(f"Erro ao processar comando: {str(e)}")
 
     def record_melody(self):
         print("Recording melody")
         melody_recorder = MelodyRecorder()
         melody_recorder.record_melody()
 
-    def preview_melody(self):
-        if not os.path.exists(self.melodies_file):
-            print("Arquivo de melodias não encontrado.")
-            return
-
-        try:
-            with open(self.melodies_file, 'r', encoding='utf-8') as f:
-                melodias = json.load(f)
-            
-            if not melodias:
-                print("Nenhuma melodia encontrada no arquivo.")
-                return
-
-            print("\nMelodias disponíveis:")
-            for i, nome_melodia in enumerate(melodias.keys(), 1):
-                print(f"{i}. {nome_melodia}")
-
-            try:
-                self.selected_melody = int(input("\nEscolha o número da melodia que deseja tocar: ")) - 1
-                nomes_melodias = list(melodias.keys())
-                
-                if 0 <= self.selected_melody < len(nomes_melodias):
-                    melodia_selecionada = nomes_melodias[self.selected_melody]
-                    dados_melodia = melodias[melodia_selecionada]
-                    print(f"Tocando melodia: {melodia_selecionada}")
-                    
-                    melody_preview = MelodyPreview()
-                    melody_preview.preview_melody(dados_melodia)
-                else:
-                    print("Número inválido. Por favor, escolha um número válido da lista.")
-            except ValueError:
-                print("Entrada inválida. Por favor, digite um número.")
-                
-        except json.JSONDecodeError:
-            print("Erro ao ler o arquivo de melodias. Formato JSON inválido.")
-        except Exception as e:
-            print(f"Erro ao processar melodias: {str(e)}")
-
-    def select_difficulty(self):
-        print("Select difficulty")
-        self.difficulty = int(input("Digite a dificuldade (1, 2, 3): "))
-        if self.difficulty not in [1, 2, 3]:
-            print("Dificuldade inválida. Por favor, digite um número válido.")
-            self.select_difficulty()
-    
-    def start_game(self):
-        print("Starting game")
-        game_interface = GameInterface(self.selected_melody, self.difficulty, self.melodies_file)
-        game_interface.start_game()
-
 if __name__ == "__main__":
     arduino = ArduinoCommunication()
-    arduino.send_command()
+    arduino.read_serial()
